@@ -308,6 +308,8 @@
 
       function performSearch() {
 
+        $("#faq-section").slideUp();
+
         let inputDomain = $("#search-input").val();
 
         let domain = extractDomain(inputDomain);
