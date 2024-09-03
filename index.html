@@ -29,7 +29,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Favicon -->
-  <link rel="icon" href="https://www.subdomainfinder.in/assets/images/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
@@ -200,9 +200,8 @@
     </table>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
-    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
@@ -255,7 +254,27 @@
                     text: 'Export',
                     className: 'btn btn-dark',
                     buttons: [
-                      'csv', 'excel', 'pdf', 'print',
+                      {
+                        extend: 'csv',
+                        action: function (e, dt, button, config) {
+                          $.fn.dataTable.ext.buttons.csvHtml5.action.call(this, e, dt, button, config);
+                          $('.dt-button-collection').hide(); // Close the dropdown
+                        }
+                      },
+                      {
+                        extend: 'excel',
+                        action: function (e, dt, button, config) {
+                          $.fn.dataTable.ext.buttons.excelHtml5.action.call(this, e, dt, button, config);
+                          $('.dt-button-collection').hide(); // Close the dropdown
+                        }
+                      },
+                      {
+                        extend: 'pdf',
+                        action: function (e, dt, button, config) {
+                          $.fn.dataTable.ext.buttons.pdfHtml5.action.call(this, e, dt, button, config);
+                          $('.dt-button-collection').hide(); // Close the dropdown
+                        }
+                      },
                       {
                         extend: 'copy',
                         text: 'Copy',
@@ -272,22 +291,43 @@
 
                           navigator.clipboard.writeText(subdomains)
                             .then(() => {
-                              console.log('Subdomains copied to clipboard!');
-                              // You might want to add a visual cue here, like a toast message
+                              Swal.fire({
+                                position: "center",
+                                animation: true,
+                                backdrop: true,
+                                color: "#545454",
+                                grow: false,
+                                icon: "success",
+                                title: "Subdomains copied to clipboard!",
+                                showConfirmButton: false,
+                                timer: 1500
+                              });
                             })
                             .catch(err => {
-                              console.error('Failed to copy: ', err);
-                              // You might want to add an error message here
+                              Swal.fire({
+                                position: "center",
+                                animation: true,
+                                backdrop: true,
+                                color: "#545454",
+                                grow: false,
+                                icon: "error",
+                                title: "Failed to copy!",
+                                showConfirmButton: false,
+                                timer: 1500
+                              });
                             });
+
+                          $('.dt-button-collection').hide(); // Close the dropdown
                         }
                       }
                     ]
                   }
                 ],
                 // Correct DataTables options
-                compact: true, // Enables compact styling
-                hover: true     // Enables row highlighting on hover
+                compact: true,
+                hover: true
               });
+
             } else {
               console.error("Error fetching subdomains:", data.message);
               // You might want to display an error message to the user here
