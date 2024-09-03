@@ -225,7 +225,7 @@
           return false
         }
 
-        
+
         $("#search-input").val(domain);
 
         $(".input-group").addClass("searching");
@@ -377,7 +377,17 @@
           // Check if we have at least two parts (domain and TLD)
           if (parts.length < 2) return false;
 
-          // Return the last two parts joined
+          // List of common TLDs that use more than one dot
+          const specialTLDs = ['co.uk', 'co.in', 'com.au', 'co.za'];
+
+          // Check for special TLDs
+          for (let tld of specialTLDs) {
+            if (domain.endsWith('.' + tld)) {
+              return parts.slice(-3).join('.');
+            }
+          }
+
+          // For other cases, return the last two parts
           return parts.slice(-2).join('.');
         } catch (error) {
           return false;
