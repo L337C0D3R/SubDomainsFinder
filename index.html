@@ -246,20 +246,6 @@
         fetch(`https://api.subdomainfinder.in/?domain=${domain}`)
           .then(response => response.json())
           .then(data => {
-            if((data.data).length == 0){
-              Swal.fire({
-                position: "center",
-                animation: true,
-                backdrop: true,
-                color: "#545454",
-                grow: false,
-                icon: "error",
-                title: "Error fetching subdomains!",
-                showConfirmButton: false,
-                timer: 1500
-              });
-              $("#subdomain-table_wrapper").addClass("d-none");
-            }
             $(".input-group").removeClass("searching");
             $("#loading-spinner").addClass("d-none");
 
@@ -282,6 +268,7 @@
               $("#export-options").removeClass("d-none");
 
               table = $('#subdomain-table').DataTable({
+                responsive: true,
                 dom: 'Bfrtip',
                 buttons: [
                   {
@@ -382,6 +369,7 @@
               showConfirmButton: false,
               timer: 1500
             });
+            $("#subdomain-table_wrapper").addClass("d-none");
             console.error("Error fetching subdomains:", error);
           });
       }
