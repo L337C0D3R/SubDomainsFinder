@@ -310,7 +310,7 @@
 
         let inputDomain = $("#search-input").val();
 
-        let domain = extractDomain(inputDomain);
+        let domain = extractDomain(inputDomain.toLowerCase());
         if (domain == false) {
           Swal.fire({
             position: "center",
