@@ -46,21 +46,26 @@ jobs:
             git ls-files > modified_files.txt
           fi
 
+      - name: Filter Web Files
+        id: filter_files
+        run: |
+          grep -E '\.(html|css|js|png|jpg|jpeg|gif|ico|webmanifest|xml|txt)$' modified_files.txt > web_files.txt
+
       - name: Format URLs for Purging
         id: format_urls
         run: |
-          base_url="${{ secrets.BASE_URL }}"
-          urls=$(sed "s|^|$base_url|" modified_files.txt)
-          echo "::set-output name=urls::$(echo $urls | jq -R -s -c 'split("\n")')"
+          files=$(cat web_files.txt | sed "s|^|https://subdomainfinder.in|" | jq -R -s -c 'split("\n")[:-1]')
+          echo "::set-output name=urls::$files"
+          echo "Files to purge: $files"
 
       - name: Purge Modified Files from Cloudflare Cache
         run: |
-          files=$(cat modified_files.txt | sed "s|^|${{ secrets.BASE_URL }}|" | jq -R -s -c 'split("\n")[:-1]')
-          echo "Files to purge: $files"
-          curl --request POST \
-          --url https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache \
-          --header 'Content-Type: application/json' \
-          --header 'Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}' \
-          --data '{"files":'$files'}'
-
-
+          if [ -n "${{ steps.format_urls.outputs.urls }}" ]; then
+            curl --request POST \
+            --url https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache \
+            --header 'Content-Type: application/json' \
+            --header 'Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}' \
+            --data '{"files":'${{ steps.format_urls.outputs.urls }}'}'
+          else
+            echo "No relevant files to purge."
+          fi
