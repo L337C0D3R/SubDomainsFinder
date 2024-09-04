@@ -46,13 +46,11 @@ jobs:
 
       - name: Purge Cloudflare Cache
         run: |
-          # Check if there is a previous commit
-          if git rev-parse HEAD^ >/dev/null 2>&1; then
-            FILES=$(git diff --name-only HEAD^ HEAD | grep -E '\.html$|\.css$|\.js$|\.png$|\.jpg$')
+          if [ $(git rev-parse --abbrev-ref HEAD) = "main" ] && [ $(git rev-list --count HEAD) -gt 1 ]; then
+            FILES=$(git diff --name-only HEAD^ HEAD | grep -E '\.html$|\.css$|\.js$|\.png$|\.jpg$') # Adjust this to include the file types you're updating
           else
-            FILES=$(git diff --name-only HEAD | grep -E '\.html$|\.css$|\.js$|\.png$|\.jpg$')
+            FILES=$(git ls-files | grep -E '\.html$|\.css$|\.js$|\.png$|\.jpg$')
           fi
-
           if [ -n "$FILES" ]; then
             URLS=$(echo "$FILES" | sed 's|^|https://yourdomain.com/|') # Replace 'yourdomain.com' with your actual domain
             curl --request POST \
@@ -60,7 +58,9 @@ jobs:
             --header 'Content-Type: application/json' \
             --header 'Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}' \
             --data "{\"files\":[$(echo "$URLS" | sed 's/$/,/' | tr '\n' ' ' | sed 's/, $//')]}"
-          else
+          fi
+        shell: /usr/bin/bash -e {0}
+
             echo "No files to purge."
           fi
 
