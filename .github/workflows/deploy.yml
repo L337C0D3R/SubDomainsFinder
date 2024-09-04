@@ -54,12 +54,9 @@ jobs:
       - name: Format URLs for Purging
         id: format_urls
         run: |
-          purge_urls=$(jq -R -s -c 'split("\n")[:-1] | map("https://subdomainfinder.in/" + .)' < web_files.txt)
-          if grep -q "^index.html$" web_files.txt; then
-            purge_urls=$(echo "$purge_urls" | jq '. += ["https://subdomainfinder.in/"]')
-          fi
-          echo "::set-output name=urls::$purge_urls"
-          echo "Files to purge: $purge_urls"
+          files=$(cat web_files.txt | sed 's|^|https://subdomainfinder.in/|' | jq -R -s -c 'split("\n")[:-1] | map(. | @json)')
+          echo "::set-output name=urls::$files"
+          echo "Files to purge: $files"
 
       - name: Purge Modified Files from Cloudflare Cache
         run: |
