@@ -17,39 +17,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2  # Fetch the last two commits
+      # ... (previous steps remain unchanged)
       
-      # ... (other steps remain unchanged)
-      
-      - name: Get Modified Files
-        id: git_diff
-        run: |
-          if git rev-parse HEAD^ >/dev/null 2>&1; then
-            git diff --name-only HEAD^ HEAD > modified_files.txt
-          else
-            git ls-files > modified_files.txt
-          fi
-          echo "Modified files:"
-          cat modified_files.txt
-          echo "MODIFIED_FILES<<EOF" >> $GITHUB_ENV
-          cat modified_files.txt >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-      - name: Filter Web Files
-        id: filter_files
-        run: |
-          echo "All modified files:"
-          echo "$MODIFIED_FILES"
-          echo "$MODIFIED_FILES" | grep -E '\.(html|css|js|png|jpg|jpeg|gif|ico|webmanifest|xml|txt)$' > web_files.txt || true
-          echo "Filtered web files:"
-          cat web_files.txt
-          echo "WEB_FILES<<EOF" >> $GITHUB_ENV
-          cat web_files.txt >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
       - name: Format URLs for Purging
         id: format_urls
         run: |
@@ -65,10 +34,10 @@ jobs:
                 echo "$base_url/$file"
               fi
             fi
-          done | jq -R -s 'split("\n") | map(select(length > 0))')
+          done | jq -R -s 'split("\n") | map(select(length > 0))' | jq -c .)
           echo "urls=$urls" >> $GITHUB_OUTPUT
           echo "Files to purge: $urls"
-
+      
       - name: Purge Modified Files from Cloudflare Cache
         run: |
           urls='${{ steps.format_urls.outputs.urls }}'
