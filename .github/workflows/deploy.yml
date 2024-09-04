@@ -44,10 +44,13 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Purge Cloudflare Cache
+      - name: Get modified files
+        id: changes
         run: |
-          curl --request POST \
-          --url https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache \
-          --header 'Content-Type: application/json' \
-          --header 'Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}' \
-          --data '{"files": ["https://subdomainfinder.in", "https://subdomainfinder.in/", "https://subdomainfinder.in/index.html", "https://subdomainfinder.in/", "https://subdomainfinder.in/privacy-policy.html", "https://subdomainfinder.in/terms-of-use.html", "https://subdomainfinder.in/sitemap.xml"]}'
+          echo "files=$(git diff --name-only HEAD^ HEAD)" >> $GITHUB_ENV
+
+      - name: Send Telegram Update
+        if: success()  # Only run this step if all previous steps were successful
+        run: |
+          curl --request GET \
+          --url "https://api.telegram.org/bot7149260415:AAHkMU6JwIBeQWUl_sP7OUg0l2z4r9QcJx8/sendMessage?chat_id=380215667&text=Deployment%20successful.%20Deployment%20ID:%20${{ github.run_id }}.%20Modified%20files:%20${{ env.files }}."
