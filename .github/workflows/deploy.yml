@@ -61,11 +61,13 @@ jobs:
       - name: Purge Modified Files from Cloudflare Cache
         run: |
           if [ -n "${{ steps.format_urls.outputs.urls }}" ]; then
+            json_data='{"files":'${{ steps.format_urls.outputs.urls }}'}'
+            echo "JSON payload being sent to Cloudflare: $json_data"
             curl --request POST \
             --url https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache \
             --header 'Content-Type: application/json' \
             --header 'Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}' \
-            --data '{"files":'${{ steps.format_urls.outputs.urls }}'}'
+            --data "$json_data"
           else
             echo "No relevant files to purge."
           fi
