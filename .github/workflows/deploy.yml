@@ -54,4 +54,4 @@ jobs:
         if: success()
         run: |
           curl --request GET \
-          --url "https://api.telegram.org/bot7149260415:AAHkMU6JwIBeQWUl_sP7OUg0l2z4r9QcJx8/sendMessage?chat_id=380215667&text=Status:%20Deployment%20successful.%0ADeployment%20ID:%20${{ github.run_id }}.%0AModified%20Files:%0A${{ steps.git_diff.outputs.modified_files }}."
+          --url "https://api.telegram.org/bot7149260415:AAHkMU6JwIBeQWUl_sP7OUg0l2z4r9QcJx8/sendMessage?chat_id=380215667&text=$(echo 'Status: Deployment successful.%0ADeployment ID: ${{ github.run_id }}.%0AModified Files:%0A${{ steps.git_diff.outputs.modified_files }}' | jq -sRr @uri)"
