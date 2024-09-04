@@ -54,7 +54,7 @@ jobs:
       - name: Format URLs for Purging
         id: format_urls
         run: |
-          files=$(cat web_files.txt | sed 's|^|https://subdomainfinder.in/|' | jq -R -s -c 'split("\n")[:-1]')
+          files=$(cat web_files.txt | sed 's|^|https://subdomainfinder.in/|' | jq -R -s -c 'split("\n")[:-1] | map(.)')
           echo "::set-output name=urls::$files"
           echo "Files to purge: $files"
 
