@@ -44,8 +44,9 @@ jobs:
         id: format_urls
         run: |
           files=$(cat web_files.txt | sed 's|^|https://subdomainfinder.in/|' | jq -R -s -c 'split("\n")[:-1] | map(. | @json)')
-          echo "::set-output name=urls::$files"
-          echo "Files to purge: $files"
+          files_with_root=$(echo "$files" | jq '. + ["https://subdomainfinder.in/"]')
+          echo "::set-output name=urls::$files_with_root"
+          echo "Files to purge: $files_with_root"
       - name: Purge Modified Files from Cloudflare Cache
         run: |
           if [ -n "${{ steps.format_urls.outputs.urls }}" ]; then
