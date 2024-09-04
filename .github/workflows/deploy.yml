@@ -55,8 +55,10 @@ jobs:
 
       - name: Purge Modified Files from Cloudflare Cache
         run: |
+          files=$(cat modified_files.txt | sed "s|^|${{ secrets.BASE_URL }}/|" | jq -R -s -c 'split("\n")[:-1]')
           curl --request POST \
           --url https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache \
           --header 'Content-Type: application/json' \
           --header 'Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}' \
-          --data '{"files":'${{ steps.format_urls.outputs.urls }}'}'
+          --data '{"files":'$files'}'
+
