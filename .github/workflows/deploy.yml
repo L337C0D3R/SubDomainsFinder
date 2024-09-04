@@ -47,7 +47,11 @@ jobs:
       - name: Get modified files
         id: changes
         run: |
-          git diff --name-only HEAD^ HEAD > modified_files.txt
+          if git rev-parse HEAD^ >/dev/null 2>&1; then
+            git diff --name-only HEAD^ HEAD > modified_files.txt
+          else
+            git diff --name-only HEAD > modified_files.txt
+          fi
           echo "files=$(cat modified_files.txt | tr '\n' ' ')" >> $GITHUB_ENV
 
       - name: Send Telegram Update
