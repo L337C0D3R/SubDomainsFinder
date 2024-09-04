@@ -1,20 +1,15 @@
 name: Deploy static content to Pages
-
 on:
   push:
     branches: ["main"]
-
   workflow_dispatch:
-
 permissions:
   contents: read
   pages: write
   id-token: write
-
 concurrency:
   group: "pages"
   cancel-in-progress: false
-
 jobs:
   deploy:
     environment:
@@ -24,44 +19,44 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 2  # Fetch the last two commits
       - name: Setup Pages
         uses: actions/configure-pages@v5
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
-
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
       - name: Get Modified Files
         id: git_diff
         run: |
-          if git rev-parse HEAD^ >/dev/null 2>&1; then
-            git diff --name-only HEAD^ HEAD > modified_files.txt
-          else
-            git ls-files > modified_files.txt
-          fi
-
+          git diff --name-only HEAD^ HEAD > modified_files.txt
       - name: Filter Web Files
         id: filter_files
         run: |
           grep -E '\.(html|css|js|png|jpg|jpeg|gif|ico|webmanifest|xml|txt)$' modified_files.txt > web_files.txt
-
       - name: Format URLs for Purging
         id: format_urls
         run: |
-          files=$(cat web_files.txt | sed 's|^|https://subdomainfinder.in/|' | jq -R -s -c 'split("\n")[:-1] | map(. | @json)')
-          echo "::set-output name=urls::$files"
-          echo "Files to purge: $files"
-
+          base_url="https://subdomainfinder.in"
+          urls=$(while read -r file; do
+            if [[ "$file" == "index.html" ]]; then
+              echo "$base_url/"
+              echo "$base_url/index.html"
+            else
+              echo "$base_url/$file"
+            fi
+          done < web_files.txt | jq -R -s 'split("\n")[:-1]')
+          echo "urls=$urls" >> $GITHUB_OUTPUT
+          echo "Files to purge: $urls"
       - name: Purge Modified Files from Cloudflare Cache
         run: |
-          if [ -n "${{ steps.format_urls.outputs.urls }}" ]; then
-            json_data='{"files":'${{ steps.format_urls.outputs.urls }}'}'
+          urls=${{ steps.format_urls.outputs.urls }}
+          if [ "$urls" != "[]" ]; then
+            json_data="{\"files\":$urls}"
             echo "JSON payload being sent to Cloudflare: $json_data"
             curl --request POST \
             --url https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache \
