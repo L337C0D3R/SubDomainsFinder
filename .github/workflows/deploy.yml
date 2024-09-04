@@ -44,18 +44,13 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Get modified files
-        id: changes
+      - name: Get changed files
+        id: changed-files
         run: |
-          if git rev-parse HEAD^ >/dev/null 2>&1; then
-            git diff --name-only HEAD^ HEAD > modified_files.txt
-          else
-            git diff --name-only HEAD > modified_files.txt
-          fi
-          echo "files=$(cat modified_files.txt | tr '\n' ' ')" >> $GITHUB_ENV
+          echo "files=$(git diff --name-only HEAD^ HEAD | xargs)" >> $GITHUB_OUTPUT
 
       - name: Send Telegram Update
         if: success()  # Only run this step if all previous steps were successful
         run: |
           curl --request GET \
-          --url "https://api.telegram.org/bot7149260415:AAHkMU6JwIBeQWUl_sP7OUg0l2z4r9QcJx8/sendMessage?chat_id=380215667&text=Status:%20Deployment%20successful.%0ADeployment%20ID:%20${{ github.run_id }}.%0AModified%20Files:%0A${{ env.files }}."
+          --url "https://api.telegram.org/bot7149260415:AAHkMU6JwIBeQWUl_sP7OUg0l2z4r9QcJx8/sendMessage?chat_id=380215667&text=Status:%20Deployment%20successful.%0ADeployment%20ID:%20${{ github.run_id }}.%0AModified%20Files:%0A${{ steps.changed-files.outputs.files }}."
