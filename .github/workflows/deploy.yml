@@ -54,16 +54,10 @@ jobs:
       - name: Format URLs for Purging
         id: format_urls
         run: |
-          purge_urls=""
-          while IFS= read -r file; do
-            url="https://subdomainfinder.in/$file"
-            purge_urls="$purge_urls\"$url\","
-            # Special case for index.html: also purge the root URL
-            if [ "$file" = "index.html" ]; then
-              purge_urls="$purge_urls\"https://subdomainfinder.in/\","
-            fi
-          done < web_files.txt
-          purge_urls="[${purge_urls%,}]"
+          purge_urls=$(jq -R -s -c 'split("\n")[:-1] | map("https://subdomainfinder.in/" + .)' < web_files.txt)
+          if grep -q "^index.html$" web_files.txt; then
+            purge_urls=$(echo "$purge_urls" | jq '. += ["https://subdomainfinder.in/"]')
+          fi
           echo "::set-output name=urls::$purge_urls"
           echo "Files to purge: $purge_urls"
 
