@@ -1,16 +1,27 @@
 name: Deploy static content to Pages
+
 on:
+  # Runs on pushes targeting the default branch
   push:
     branches: ["main"]
+
+  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
   group: "pages"
   cancel-in-progress: false
+
 jobs:
+  # Single deploy job since we're just deploying
   deploy:
     environment:
       name: github-pages
@@ -19,68 +30,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          fetch-depth: 2  # Fetch the last two commits
-      
-      # ... (other steps remain unchanged)
-      
-      - name: Get Modified Files
-        id: git_diff
-        run: |
-          if git rev-parse HEAD^ >/dev/null 2>&1; then
-            git diff --name-only HEAD^ HEAD > modified_files.txt
-          else
-            git ls-files > modified_files.txt
-          fi
-          echo "Modified files:"
-          cat modified_files.txt
-          echo "modified_files<<EOF" >> $GITHUB_OUTPUT
-          cat modified_files.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Upload entire repository
+          path: '.'
 
-      - name: Filter Web Files
-        id: filter_files
-        run: |
-          echo "All modified files:"
-          echo "${{ steps.git_diff.outputs.modified_files }}"
-          echo "${{ steps.git_diff.outputs.modified_files }}" | grep -E '\.(html|css|js|png|jpg|jpeg|gif|ico|webmanifest|xml|txt)$' > web_files.txt || true
-          echo "Filtered web files:"
-          cat web_files.txt
-          echo "web_files<<EOF" >> $GITHUB_OUTPUT
-          cat web_files.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
-      - name: Format URLs for Purging
-        id: format_urls
+      - name: Purge Cloudflare Cache
         run: |
-          base_url="https://subdomainfinder.in"
-          echo "Web files to process:"
-          echo "${{ steps.filter_files.outputs.web_files }}"
-          urls=$(echo "${{ steps.filter_files.outputs.web_files }}" | while read -r file; do
-            if [[ -n "$file" ]]; then
-              if [[ "$file" == "index.html" ]]; then
-                echo "$base_url/"
-                echo "$base_url/index.html"
-              else
-                echo "$base_url/$file"
-              fi
-            fi
-          done | jq -R -s 'split("\n") | map(select(length > 0))' | jq -c .)
-          echo "urls=$urls" >> $GITHUB_OUTPUT
-          echo "Files to purge: $urls"
-
-      - name: Purge Modified Files from Cloudflare Cache
-        run: |
-          urls='${{ steps.format_urls.outputs.urls }}'
-          echo "Received urls: $urls"
-          if [ "$urls" != "[]" ] && [ -n "$urls" ]; then
-            json_data="{\"files\":$urls}"
-            echo "JSON payload being sent to Cloudflare: $json_data"
-            curl --request POST \
-              --url https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache \
-              --header 'Content-Type: application/json' \
-              --header 'Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}' \
-              --data "$json_data"
-          else
-            echo "No relevant files to purge."
-          fi
+          curl --request POST \
+          --url https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache \
+          --header 'Content-Type: application/json' \
+          --header 'Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}' \
+          --data '{"purge_everything":true}'
