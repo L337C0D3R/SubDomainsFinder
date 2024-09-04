@@ -47,7 +47,8 @@ jobs:
       - name: Get modified files
         id: changes
         run: |
-          echo "files=$(git diff --name-only HEAD^ HEAD)" >> $GITHUB_ENV
+          git diff --name-only HEAD^ HEAD > modified_files.txt
+          echo "files=$(cat modified_files.txt | tr '\n' ' ')" >> $GITHUB_ENV
 
       - name: Send Telegram Update
         if: success()  # Only run this step if all previous steps were successful
