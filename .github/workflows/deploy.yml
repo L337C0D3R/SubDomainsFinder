@@ -21,7 +21,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
   deploy:
     environment:
       name: github-pages
@@ -37,30 +36,28 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
           path: '.'
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Purge Cloudflare Cache
+      - name: Get Modified Files
+        id: git_diff
         run: |
-          if [ $(git rev-parse --abbrev-ref HEAD) = "main" ] && [ $(git rev-list --count HEAD) -gt 1 ]; then
-            FILES=$(git diff --name-only HEAD^ HEAD | grep -E '\.html$|\.css$|\.js$|\.png$|\.jpg$') # Adjust this to include the file types you're updating
-          else
-            FILES=$(git ls-files | grep -E '\.html$|\.css$|\.js$|\.png$|\.jpg$')
-          fi
-          if [ -n "$FILES" ]; then
-            URLS=$(echo "$FILES" | sed 's|^|https://yourdomain.com/|') # Replace 'yourdomain.com' with your actual domain
-            curl --request POST \
-            --url https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache \
-            --header 'Content-Type: application/json' \
-            --header 'Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}' \
-            --data "{\"files\":[$(echo "$URLS" | sed 's/$/,/' | tr '\n' ' ' | sed 's/, $//')]}"
-          fi
-        shell: /usr/bin/bash -e {0}
+          git diff --name-only HEAD^ HEAD > modified_files.txt
 
-            echo "No files to purge."
-          fi
+      - name: Format URLs for Purging
+        id: format_urls
+        run: |
+          base_url="${{ secrets.BASE_URL }}"
+          urls=$(sed "s|^|$base_url|" modified_files.txt)
+          echo "::set-output name=urls::$(echo $urls | jq -R -s -c 'split("\n")')"
 
+      - name: Purge Modified Files from Cloudflare Cache
+        run: |
+          curl --request POST \
+          --url https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache \
+          --header 'Content-Type: application/json' \
+          --header 'Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}' \
+          --data '{"files":'${{ steps.format_urls.outputs.urls }}'}'
