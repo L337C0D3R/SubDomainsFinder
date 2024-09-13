@@ -176,21 +176,22 @@
         <span class="visually-hidden">Loading...</span>
       </div>
     </div>
-    <div id="updates-section" class="mt-5"style="background-color: #f8f9fa; border-radius: 15px; padding: 20px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+    <div id="updates-section" class="mt-5" style="background-color: #f8f9fa; border-radius: 15px; padding: 20px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
       <h3 style="font-size: 1.25em; color: #343a40; font-weight: 600; margin-bottom: 1rem;">Feature Updates</h3>
       <ul style="list-style-type: none; padding-left: 0;">
           <li style="position: relative; padding-left: 20px; margin-bottom: 15px;">
               <span style="position: absolute; left: 0; top: 5px; width: 10px; height: 10px; background-color: #007bff; border-radius: 50%;"></span>
               <div style="border-left: 2px solid #007bff; padding-left: 15px;">
-                  <h4 style="font-size: 1em; color: #007bff; font-weight: 500; margin-bottom: 0.5rem;">September 2024 - Multi-Level Domain Support</h4>
+                  <h4 style="font-size: 1em; color: #007bff; font-weight: 500; margin-bottom: 0.5rem;">14th September 2024 - Open All URLs in New Tab</h4>
                   <p style="font-size: 0.9em; color: #6c757d; margin: 0;">
-                      We've fixed a bug where the script was not accepting multi-level domains like `.co.in` and `.ac.in`. Now, the tool accurately handles these domains.
+                      We've added the most awaited and requested feature, "Open All URLs in New Tab". You can now open all listed subdomains in new tabs with a single click.
                   </p>
               </div>
           </li>
           <!-- Add more updates here following the same structure -->
       </ul>
   </div>
+  
     <div id="faq-section" class="mt-5">
       <h2>Frequently Asked Questions</h2>
       <div class="accordion" id="faqAccordion">
@@ -291,7 +292,6 @@
         </div>
       </div>
     </div>
-
     <div id="subdomain-count" class="d-none text-center mt-3">
       Total Subdomains: <span id="count"></span>
     </div>
@@ -346,8 +346,6 @@
             showConfirmButton: false,
             timer: 1500
           }).then(() => {
-            // This code runs after the alert is closed
-
             setTimeout(() => {
               $("#search-input").val('');
               $("#search-input").focus();
@@ -476,6 +474,37 @@
                         }
                       }
                     ]
+                  },
+                  {
+                    text: 'Open All URLs in New Tab',
+                    className: 'btn btn-primary ml-2',
+                    action: function () {
+                      const rows = table.rows().nodes();
+                      if (rows.length > 0) {
+                        Swal.fire({
+                          title: 'Please disable popup blocking!',
+                          text: 'To open all URLs in new tabs, make sure popup blocking is disabled in your browser settings.',
+                          icon: 'warning',
+                          showCancelButton: true,
+                          confirmButtonText: 'I have disabled it',
+                          cancelButtonText: 'Cancel'
+                        }).then((result) => {
+                          if (result.isConfirmed) {
+                            $(rows).each(function () {
+                              const url = 'http://' + $(this).find('td:eq(1)').text(); // Prepend 'http://' to the subdomain
+                              window.open(url, '_blank'); // Open the URL in a new tab
+                            });
+                          }
+                        });
+                      } else {
+                        Swal.fire({
+                          title: 'No URLs to open!',
+                          text: 'Please search for a domain first to generate subdomains.',
+                          icon: 'info',
+                          confirmButtonText: 'OK'
+                        });
+                      }
+                    }
                   }
                 ],
                 compact: true,
