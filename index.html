@@ -428,6 +428,13 @@
               table = $('#subdomain-table').DataTable({
                 responsive: true,
                 dom: 'Bfrtip',
+                columnDefs: [
+                    { width: '5%', targets: 0 }, 
+                    { width: '20%', targets: 2 },
+                    { targets: 2, className: 'dt-center' }
+                    // Add more as needed
+                ],
+                fixedColumns: true,
                 buttons: [
                   {
                     extend: 'collection',
