@@ -441,7 +441,7 @@
 
         $(".dataTables_info, .dataTables_paginate").hide(); // Hide pagination and info
         var token = turnstile.getResponse();
-        fetch(`https://api.subdomainfinder.in/?domain=${domain}&token=${token}`)
+        fetch(`https://api.subdomainfinder.in/?domain=${domain}`, {headers: {'X-Secure-Token': token}})
           .then(response => {
             if (!response.ok) {
               Swal.fire({
