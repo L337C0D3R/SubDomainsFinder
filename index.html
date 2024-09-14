@@ -459,6 +459,7 @@
             return response.json();
           })
           .then(data => {
+            turnstile.reset()
             $(".input-group").removeClass("searching");
             $("#loading-spinner").addClass("d-none");
 
