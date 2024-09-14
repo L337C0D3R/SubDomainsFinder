@@ -444,7 +444,7 @@
         fetch(`https://api.subdomainfinder.in/?domain=${domain}`, {
           method: 'GET',
           headers: {
-            'secure_token': token
+            'X-Secure-Token': token
           }})
           .then(response => {
             if (!response.ok) {
