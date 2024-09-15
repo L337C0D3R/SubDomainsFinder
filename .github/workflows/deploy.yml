@@ -56,4 +56,4 @@ jobs:
         if: success()  # Only run this step if all previous steps were successful
         run: |
           curl --request GET \
-          --url "https://api.telegram.org/bot7149260415:AAHkMU6JwIBeQWUl_sP7OUg0l2z4r9QcJx8/sendMessage?chat_id=380215667&text=Deployment%20and%20cache%20purge%20completed%20successfully."
+          --url "https://api.telegram.org/bot7149260415:AAHk_PvLrZ-Xm2N7sinvLQEiZhdeL3IP8Hs/sendMessage?chat_id=380215667&text=Deployment%20and%20cache%20purge%20completed%20successfully."
