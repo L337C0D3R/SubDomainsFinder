@@ -51,9 +51,3 @@ jobs:
           --header 'Content-Type: application/json' \
           --header 'Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}' \
           --data '{"files": ["https://subdomainfinder.in", "https://subdomainfinder.in/", "https://subdomainfinder.in/index.html", "https://subdomainfinder.in/", "https://subdomainfinder.in/privacy-policy.html", "https://subdomainfinder.in/terms-of-use.html", "https://subdomainfinder.in/sitemap.xml"]}'
-
-      - name: Send Telegram Update
-        if: success()  # Only run this step if all previous steps were successful
-        run: |
-          curl --request GET \
-          --url "https://api.telegram.org/bot7149260415:AAHk_PvLrZ-Xm2N7sinvLQEiZhdeL3IP8Hs/sendMessage?chat_id=380215667&text=Deployment%20and%20cache%20purge%20completed%20successfully."
