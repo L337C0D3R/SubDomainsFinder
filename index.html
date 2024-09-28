@@ -538,42 +538,18 @@
         var token = turnstile.getResponse();
         fetch(`https://api.subdomainfinder.in/?domain=${domain}`, { headers: { 'X-Secure-Token': token } })
           .then(response => {
-            if (response.status === 403) {
+            if (!response.ok) {
               Swal.fire({
                 position: "center",
                 animation: true,
                 backdrop: true,
                 color: "#545454",
-                icon: "info",
-                title: "Please wait for a few seconds before making another request.",
-                showConfirmButton: false,
-                timer: 3000 // Adjust the wait time as needed
-              });
-              return;
-            } else if (response.status === 500) {
-              Swal.fire({
-                position: "center",
-                animation: true,
-                backdrop: true,
-                color: "#545454",
+                grow: false,
                 icon: "info",
                 title: "We are currently experiencing a high volume of requests. Please try again!",
                 showConfirmButton: false,
                 timer: 1500
               });
-              return;
-            } else if (!response.ok) {
-              Swal.fire({
-                position: "center",
-                animation: true,
-                backdrop: true,
-                color: "#545454",
-                icon: "error",
-                title: "An error occurred. Please try again later!",
-                showConfirmButton: false,
-                timer: 1500
-              });
-              return
             }
             return response.json();
           })
