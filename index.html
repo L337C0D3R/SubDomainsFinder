@@ -566,6 +566,10 @@
                           var status = data.Status === 0 ? 'Active' : 'Inactive';
                           var ip = data.Answer && data.Answer[0] && data.Answer[0].data ? data.Answer[0].data : 'N/A';
 
+                          if (ip !== 'N/A' && ip.endsWith('.')) {
+                            ip = ip.slice(0, -1);
+                          }
+
                           // Update IP cell
                           if (ip === 'N/A') {
                             $ipCell.html('<span class="badge badge-na">NOT FOUND</span>');
