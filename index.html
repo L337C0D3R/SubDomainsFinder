@@ -538,8 +538,18 @@
         var token = turnstile.getResponse();
         fetch(`https://api.subdomainfinder.in/?domain=${domain}`, { headers: { 'X-Secure-Token': token } })
           .then(response => {
-            console.log(response.status)
-            if (!response.ok) {
+            if (response.status == 403) {
+              Swal.fire({
+                    position: "center",
+                    animation: true,
+                    backdrop: true,
+                    color: "#545454",
+                    icon: "info",
+                    title: "Please wait for a few seconds before making another request.",
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+            } else {
               Swal.fire({
                 position: "center",
                 animation: true,
