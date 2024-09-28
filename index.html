@@ -560,7 +560,7 @@
                       $statusCell.html('<div class="loader"></div>');
 
                       // Fetch data from API
-                      fetch(`https://lookup.subdomainfinder.in/resolve?name=${subdomain}`)
+                      fetch(`https://lookup.subdomainfinder.in/resolve?name=${subdomain}&rd=1`)
                         .then(response => response.json())
                         .then(data => {
                           var status = data.Status === 0 ? 'Active' : 'Inactive';
