@@ -205,6 +205,50 @@
     .personal-navbar {
       justify-content: flex-start !important;
     }
+
+    .loader {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #343a40;
+        border-radius: 50%;
+        width: 14px;
+        height: 14px;
+        animation: spin 1s linear infinite;
+        display: inline-block;
+        margin: 0 auto;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 0.25em 0.5em;
+        font-size: 90%;
+        font-weight: 600;
+        border-radius: 0.25rem;
+        text-align: center;
+        color: white;
+      }
+
+      .badge-active {
+        background-color: #4CAF50; /* Material Green */
+      }
+
+      .badge-inactive {
+        background-color: #F44336; /* Material Red */
+      }
+
+      .badge-na {
+        background-color: #9E9E9E; /* Material Grey for N/A */
+      }
+
+      .badge-error {
+        background-color: #FF5722; /* Material Orange for Error */
+      }
+
+
   </style>
 </head>
 
@@ -249,14 +293,13 @@
           <span
             style="position: absolute; left: 0; top: 5px; width: 10px; height: 10px; background-color: #28a745; border-radius: 50%;"></span>
           <div style="border-left: 2px solid #28a745; padding-left: 15px;">
-            <h3 style="font-size: 1em; color: #28a745; font-weight: 500; margin-bottom: 0.5rem;">15th September 2024 -
-              Improved Stability and Speed</h3>
+            <h3 style="font-size: 1em; color: #28a745; font-weight: 500; margin-bottom: 0.5rem;">28th September 2024 - New Subdomain Details</h3>
             <p style="font-size: 0.9em; color: #343a40; margin: 0;">
-              We've made significant improvements to our app's reliability and speed. The stability has been enhanced,
-              leading to faster responses and reduced downtime.
+              We've added two new columns to the subdomain results: one showing the IP address and another indicating whether the subdomain is active or inactive. This makes it easier to understand the status of each subdomain at a glance.
             </p>
           </div>
         </li>
+             
         <!-- Add more updates here following the same structure -->
       </ul>
     </div>
@@ -387,12 +430,14 @@
         <tr>
           <th>#</th>
           <th>Subdomain</th>
+          <th>IP/HOSTNAME</th>
+          <th>Status</th>
           <th>Link</th>
         </tr>
       </thead>
       <tbody>
       </tbody>
-    </table>
+    </table>    
   </div>
 
 
@@ -481,8 +526,7 @@
               }
 
               $("#subdomain-table tbody").empty();
-              data.data.forEach((subdomain, index) => {
-                $("#subdomain-table tbody").append(`<tr><td>${index + 1}</td><td>${subdomain}</td><td><a href="http://${subdomain}" target="_blank"><button type="button" class="btn btn-outline-dark">🔗 Open Link</button></a></td></tr>`);
+              data.data.forEach((subdomain, index) => { $("#subdomain-table tbody").append(`<tr><td>${index + 1}</td><td>${subdomain}</td><td class="ip-cell" data-subdomain="${subdomain}">Loading...</td><td class="status-cell" data-subdomain="${subdomain}">Loading...</td><td><a href="http://${subdomain}" target="_blank"><button type="button" class="btn btn-outline-dark">🔗 Open Link</button></a></td></tr>`);
               });
 
               $("#count").text(data.count);
@@ -496,11 +540,58 @@
                 dom: 'Bfrtip',
                 columnDefs: [
                   { width: '5%', targets: 0 },
-                  { width: '20%', targets: 2 },
-                  { targets: 2, className: 'dt-center' }
-                  // Add more as needed
+                  { width: '20%', targets: 2 }
                 ],
                 fixedColumns: true,
+                drawCallback: function (settings) {
+                  var api = this.api();
+                  var rows = api.rows({ page: 'current' }).nodes();
+
+                  $(rows).each(function () {
+                    var $row = $(this);
+                    var $ipCell = $row.find('.ip-cell');
+                    var $statusCell = $row.find('.status-cell');
+                    var subdomain = $ipCell.data('subdomain');
+
+                    // Proceed only if not already loaded
+                    if (!$ipCell.hasClass('loaded')) {
+                      // Show loading animation
+                      $ipCell.html('<div class="loader"></div>');
+                      $statusCell.html('<div class="loader"></div>');
+
+                      // Fetch data from API
+                      fetch(`https://lookup.subdomainfinder.in/resolve?name=${subdomain}`)
+                        .then(response => response.json())
+                        .then(data => {
+                          var status = data.Status === 0 ? 'Active' : 'Inactive';
+                          var ip = data.Answer && data.Answer[0] && data.Answer[0].data ? data.Answer[0].data : 'N/A';
+
+                          // Update IP cell
+                          if (ip === 'N/A') {
+                            $ipCell.html('<span class="badge badge-na">NOT FOUND</span>');
+                          } else {
+                            $ipCell.text(ip);
+                          }
+
+                          // Update Status cell
+                          if (status === 'Active') {
+                            $statusCell.html('<span class="badge badge-active">Active</span>');
+                          } else {
+                            $statusCell.html('<span class="badge badge-inactive">Inactive</span>');
+                          }
+
+                          $ipCell.addClass('loaded');
+                          $statusCell.addClass('loaded');
+                        })
+                        .catch(error => {
+                          // Handle errors by displaying a red "Error" badge
+                          $ipCell.html('<span class="badge badge-error">Error</span>');
+                          $statusCell.html('<span class="badge badge-error">Error</span>');
+                          console.error('Error fetching data:', error);
+                        });
+                    }
+                  });
+                },
                 buttons: [
                   {
                     extend: 'collection',
