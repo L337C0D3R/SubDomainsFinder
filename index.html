@@ -538,6 +538,7 @@
         var token = turnstile.getResponse();
         fetch(`https://api.subdomainfinder.in/?domain=${domain}`, { headers: { 'X-Secure-Token': token } })
           .then(response => {
+            console.log(response.status)
             if (!response.ok) {
               Swal.fire({
                 position: "center",
