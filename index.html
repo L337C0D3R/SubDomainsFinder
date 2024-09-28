@@ -473,7 +473,7 @@
 
 
   <script rel="preconnect" src="/assets/js/bootstrap.bundle.min.js"></script>
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback" defer></script>
   <script src="/assets/js/sweetalert2.all.min.js" defer></script>
   <script rel="preconnect" src="/assets/js/jquery.min.js"></script>
   <script rel="preconnect" src="/assets/js/jquery.dataTables.min.js" defer></script>
@@ -534,286 +534,279 @@
         $("#export-options").addClass("d-none");
         $("#subdomain-table_wrapper").addClass("d-none");
 
-        $(".dataTables_info, .dataTables_paginate").hide();
-        turnstile.ready(function () {
-          turnstile.render("#token", {
-            sitekey: "0x4AAAAAAAj7jyMV3Zv9ZMN-",
-            callback: function (token) {
+        $(".dataTables_info, .dataTables_paginate").hide(); // Hide pagination and info
+        var token = turnstile.getResponse();
+        fetch(`https://api.subdomainfinder.in/?domain=${domain}`, { headers: { 'X-Secure-Token': token } })
+          .then(response => {
+            if (!response.ok) {
+              Swal.fire({
+                position: "center",
+                animation: true,
+                backdrop: true,
+                color: "#545454",
+                grow: false,
+                icon: "info",
+                title: "We are currently experiencing a high volume of requests. Please try again!",
+                showConfirmButton: false,
+                timer: 1500
+              });
+            }
+            return response.json();
+          })
+          .then(data => {
+            turnstile.reset()
+            $(".input-group").removeClass("searching");
+            $("#loading-spinner").addClass("d-none");
 
-              fetch(`https://subdomainssearchstaging.secureapi.workers.dev/?domain=${domain}`, { headers: { 'X-Secure-Token': token } })
-                .then(response => {
-                  if (!response.ok) {
-                    Swal.fire({
-                      position: "center",
-                      animation: true,
-                      backdrop: true,
-                      color: "#545454",
-                      grow: false,
-                      icon: "info",
-                      title: "We are currently experiencing a high volume of requests. Please try again!",
-                      showConfirmButton: false,
-                      timer: 1500
-                    });
-                  }
-                  return response.json();
-                })
-                .then(data => {
-                  turnstile.reset()
-                  $(".input-group").removeClass("searching");
-                  $("#loading-spinner").addClass("d-none");
+            $("#subdomain-table_wrapper").removeClass("d-none");
 
-                  $("#subdomain-table_wrapper").removeClass("d-none");
+            if (data.status === "success") {
+              if (table) {
+                table.destroy();
+              }
 
-                  if (data.status === "success") {
-                    if (table) {
-                      table.destroy();
+              $("#subdomain-table tbody").empty();
+              data.data.forEach((subdomain, index) => {
+                $("#subdomain-table tbody").append(`
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td>${subdomain}</td>
+                    <td class="ip-cell" data-subdomain="${subdomain}">Loading...</td>
+                    <td class="type-cell" data-subdomain="${subdomain}">Loading...</td>
+                    <td class="status-cell" data-subdomain="${subdomain}">Loading...</td>
+                    <td><a href="http://${subdomain}" target="_blank"><button type="button" class="btn btn-outline-dark">🔗 Open Link</button></a></td>
+                  </tr>
+                `);
+              });
+
+
+              $("#count").text(data.count);
+
+              $("#subdomain-table").removeClass("d-none");
+              $("#subdomain-count").removeClass("d-none");
+              $("#export-options").removeClass("d-none");
+
+              table = $('#subdomain-table').DataTable({
+                responsive: true,
+                dom: 'Bfrtip',
+                columnDefs: [
+                  { width: '5%', targets: 0 },
+                  { width: '20%', targets: 2 }
+                ],
+                fixedColumns: true,
+                drawCallback: function (settings) {
+                  var api = this.api();
+                  var rows = api.rows({ page: 'current' }).nodes();
+
+                  $(rows).each(function () {
+                    var $row = $(this);
+                    var $ipCell = $row.find('.ip-cell');
+                    var $statusCell = $row.find('.status-cell');
+                    var subdomain = $ipCell.data('subdomain');
+
+                    // Proceed only if not already loaded
+                    if (!$ipCell.hasClass('loaded')) {
+                      // Show loading animation
+                      $ipCell.html('<div class="loader"></div>');
+                      $statusCell.html('<div class="loader"></div>');
+
+                      // Fetch data from API
+                      fetch(`https://lookup.subdomainfinder.in/resolve?name=${subdomain}&rd=1`)
+                      .then(response => response.json())
+                      .then(data => {
+                        var status = data.Status === 0 ? 'Active' : 'Inactive';
+                        var ip = data.Answer && data.Answer[0] && data.Answer[0].data ? data.Answer[0].data : 'N/A';
+                        var typeBadge = '<span class="badge badge-dark">N/A</span>';
+
+                        if (ip !== 'N/A' && ip.endsWith('.')) {
+                          ip = ip.slice(0, -1);
+                        }
+
+                        if (data.Answer && data.Answer[0]) {
+                          switch (data.Answer[0].type) {
+                            case 1: typeBadge = '<span class="badge badge-warning">IPV4</span>'; break;
+                            case 28: typeBadge = '<span class="badge badge-warning">IPV6</span>'; break;
+                            case 15: typeBadge = '<span class="badge badge-warning">MAIL</span>'; break;
+                            case 5: typeBadge = '<span class="badge badge-warning">ALIAS</span>'; break;
+                            case 33: typeBadge = '<span class="badge badge-warning">SERVICE</span>'; break;
+                            default: typeBadge = '<span class="badge badge-warning">OTHER</span>';
+                          }
+                        }
+
+                        // Update IP cell
+                        if (ip === 'N/A') {
+                          $ipCell.html('<span class="badge badge-dark">NOT FOUND</span>');
+                        } else {
+                          $ipCell.text(ip);
+                        }
+
+                        // Update Type cell with a badge
+                        $row.find('.type-cell').html(typeBadge); // Insert the badge for type
+
+                        // Update Status cell
+                        if (status === 'Active' && ip != 'N/A') {
+                          $statusCell.html('<span class="badge badge-success">ACTIVE</span>');
+                        } else {
+                          $statusCell.html('<span class="badge badge-inactive">INACTIVE</span>');
+                        }
+
+                        $ipCell.addClass('loaded');
+                        $statusCell.addClass('loaded');
+                      })
+                      .catch(error => {
+                        // Handle errors by displaying a red "Error" badge
+                        $ipCell.html('<span class="badge badge-error">Error</span>');
+                        $statusCell.html('<span class="badge badge-error">Error</span>');
+                        console.error('Error fetching data:', error);
+                      });
                     }
+                  });
+                },
+                buttons: [
+                  {
+                    extend: 'collection',
+                    text: 'Export',
+                    className: 'btn btn-dark',
+                    buttons: [
+                      {
+                        extend: 'csv',
+                        exportOptions: {
+                          columns: [1],
+                          format: {
+                            body: function (data, row, column, node) {
+                              return data;
+                            }
+                          }
+                        },
+                        action: function (e, dt, button, config) {
+                          $.fn.dataTable.ext.buttons.csvHtml5.action.call(this, e, dt, button, config);
+                          $('.dt-button-collection').hide(); // Close the dropdown
+                          $('.dt-button-background').remove(); // Remove the backdrop // Close the dropdown
+                        }
+                      },
+                      {
+                        extend: 'excel',
+                        exportOptions: {
+                          columns: [1],
+                          format: {
+                            body: function (data, row, column, node) {
+                              return data;
+                            }
+                          }
+                        },
+                        action: function (e, dt, button, config) {
+                          $.fn.dataTable.ext.buttons.excelHtml5.action.call(this, e, dt, button, config);
+                          $('.dt-button-collection').hide();
+                          $('.dt-button-background').remove();
+                        }
+                      },
+                      {
+                        extend: 'copy',
+                        text: 'Clipboard',
+                        exportOptions: {
+                          columns: [1],
+                          format: {
+                            body: function (data, row, column, node) {
+                              return data;
+                            }
+                          }
+                        },
+                        action: function (e, dt, button, config) {
+                          const subdomains = table.column(1).data().toArray().join('\n');
 
-                    $("#subdomain-table tbody").empty();
-                    data.data.forEach((subdomain, index) => {
-                      $("#subdomain-table tbody").append(`
-                        <tr>
-                          <td>${index + 1}</td>
-                          <td>${subdomain}</td>
-                          <td class="ip-cell" data-subdomain="${subdomain}">Loading...</td>
-                          <td class="type-cell" data-subdomain="${subdomain}">Loading...</td>
-                          <td class="status-cell" data-subdomain="${subdomain}">Loading...</td>
-                          <td><a href="http://${subdomain}" target="_blank"><button type="button" class="btn btn-outline-dark">🔗 Open Link</button></a></td>
-                        </tr>
-                      `);
-                    });
-
-
-                    $("#count").text(data.count);
-
-                    $("#subdomain-table").removeClass("d-none");
-                    $("#subdomain-count").removeClass("d-none");
-                    $("#export-options").removeClass("d-none");
-
-                    table = $('#subdomain-table').DataTable({
-                      responsive: true,
-                      dom: 'Bfrtip',
-                      columnDefs: [
-                        { width: '5%', targets: 0 },
-                        { width: '20%', targets: 2 }
-                      ],
-                      fixedColumns: true,
-                      drawCallback: function (settings) {
-                        var api = this.api();
-                        var rows = api.rows({ page: 'current' }).nodes();
-
-                        $(rows).each(function () {
-                          var $row = $(this);
-                          var $ipCell = $row.find('.ip-cell');
-                          var $statusCell = $row.find('.status-cell');
-                          var subdomain = $ipCell.data('subdomain');
-
-                          // Proceed only if not already loaded
-                          if (!$ipCell.hasClass('loaded')) {
-                            // Show loading animation
-                            $ipCell.html('<div class="loader"></div>');
-                            $statusCell.html('<div class="loader"></div>');
-
-                            // Fetch data from API
-                            fetch(`https://lookup.subdomainfinder.in/resolve?name=${subdomain}&rd=1`)
-                            .then(response => response.json())
-                            .then(data => {
-                              var status = data.Status === 0 ? 'Active' : 'Inactive';
-                              var ip = data.Answer && data.Answer[0] && data.Answer[0].data ? data.Answer[0].data : 'N/A';
-                              var typeBadge = '<span class="badge badge-dark">N/A</span>';
-
-                              if (ip !== 'N/A' && ip.endsWith('.')) {
-                                ip = ip.slice(0, -1);
-                              }
-
-                              if (data.Answer && data.Answer[0]) {
-                                switch (data.Answer[0].type) {
-                                  case 1: typeBadge = '<span class="badge badge-warning">IPV4</span>'; break;
-                                  case 28: typeBadge = '<span class="badge badge-warning">IPV6</span>'; break;
-                                  case 15: typeBadge = '<span class="badge badge-warning">MAIL</span>'; break;
-                                  case 5: typeBadge = '<span class="badge badge-warning">ALIAS</span>'; break;
-                                  case 33: typeBadge = '<span class="badge badge-warning">SERVICE</span>'; break;
-                                  default: typeBadge = '<span class="badge badge-warning">OTHER</span>';
-                                }
-                              }
-
-                              // Update IP cell
-                              if (ip === 'N/A') {
-                                $ipCell.html('<span class="badge badge-dark">NOT FOUND</span>');
-                              } else {
-                                $ipCell.text(ip);
-                              }
-
-                              // Update Type cell with a badge
-                              $row.find('.type-cell').html(typeBadge); // Insert the badge for type
-
-                              // Update Status cell
-                              if (status === 'Active' && ip != 'N/A') {
-                                $statusCell.html('<span class="badge badge-success">ACTIVE</span>');
-                              } else {
-                                $statusCell.html('<span class="badge badge-inactive">INACTIVE</span>');
-                              }
-
-                              $ipCell.addClass('loaded');
-                              $statusCell.addClass('loaded');
+                          navigator.clipboard.writeText(subdomains)
+                            .then(() => {
+                              Swal.fire({
+                                position: "center",
+                                animation: true,
+                                backdrop: true,
+                                color: "#545454",
+                                grow: false,
+                                icon: "success",
+                                title: "Subdomains copied to clipboard!",
+                                showConfirmButton: false,
+                                timer: 1500
+                              });
                             })
-                            .catch(error => {
-                              // Handle errors by displaying a red "Error" badge
-                              $ipCell.html('<span class="badge badge-error">Error</span>');
-                              $statusCell.html('<span class="badge badge-error">Error</span>');
-                              console.error('Error fetching data:', error);
+                            .catch(err => {
+                              Swal.fire({
+                                position: "center",
+                                animation: true,
+                                backdrop: true,
+                                color: "#545454",
+                                grow: false,
+                                icon: "error",
+                                title: "Failed to copy!",
+                                showConfirmButton: false,
+                                timer: 1500
+                              });
+                            });
+
+                          $('.dt-button-collection').hide(); // Close the dropdown
+                          $('.dt-button-background').remove(); // Remove the backdrop
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    text: 'Open All URLs in New Tab',
+                    className: 'btn btn-primary ml-2',
+                    action: function () {
+                      const rows = table.rows().nodes();
+                      if (rows.length > 0) {
+                        Swal.fire({
+                          title: 'Please disable popup blocking!',
+                          text: 'To open all URLs in new tabs, make sure popup blocking is disabled in your browser settings.',
+                          icon: 'warning',
+                          showCancelButton: true,
+                          confirmButtonText: 'I have disabled it',
+                          cancelButtonText: 'Cancel'
+                        }).then((result) => {
+                          if (result.isConfirmed) {
+                            $(rows).each(function () {
+                              const url = 'http://' + $(this).find('td:eq(1)').text(); // Prepend 'http://' to the subdomain
+                              window.open(url, '_blank'); // Open the URL in a new tab
                             });
                           }
                         });
-                      },
-                      buttons: [
-                        {
-                          extend: 'collection',
-                          text: 'Export',
-                          className: 'btn btn-dark',
-                          buttons: [
-                            {
-                              extend: 'csv',
-                              exportOptions: {
-                                columns: [1],
-                                format: {
-                                  body: function (data, row, column, node) {
-                                    return data;
-                                  }
-                                }
-                              },
-                              action: function (e, dt, button, config) {
-                                $.fn.dataTable.ext.buttons.csvHtml5.action.call(this, e, dt, button, config);
-                                $('.dt-button-collection').hide(); // Close the dropdown
-                                $('.dt-button-background').remove(); // Remove the backdrop // Close the dropdown
-                              }
-                            },
-                            {
-                              extend: 'excel',
-                              exportOptions: {
-                                columns: [1],
-                                format: {
-                                  body: function (data, row, column, node) {
-                                    return data;
-                                  }
-                                }
-                              },
-                              action: function (e, dt, button, config) {
-                                $.fn.dataTable.ext.buttons.excelHtml5.action.call(this, e, dt, button, config);
-                                $('.dt-button-collection').hide();
-                                $('.dt-button-background').remove();
-                              }
-                            },
-                            {
-                              extend: 'copy',
-                              text: 'Clipboard',
-                              exportOptions: {
-                                columns: [1],
-                                format: {
-                                  body: function (data, row, column, node) {
-                                    return data;
-                                  }
-                                }
-                              },
-                              action: function (e, dt, button, config) {
-                                const subdomains = table.column(1).data().toArray().join('\n');
-
-                                navigator.clipboard.writeText(subdomains)
-                                  .then(() => {
-                                    Swal.fire({
-                                      position: "center",
-                                      animation: true,
-                                      backdrop: true,
-                                      color: "#545454",
-                                      grow: false,
-                                      icon: "success",
-                                      title: "Subdomains copied to clipboard!",
-                                      showConfirmButton: false,
-                                      timer: 1500
-                                    });
-                                  })
-                                  .catch(err => {
-                                    Swal.fire({
-                                      position: "center",
-                                      animation: true,
-                                      backdrop: true,
-                                      color: "#545454",
-                                      grow: false,
-                                      icon: "error",
-                                      title: "Failed to copy!",
-                                      showConfirmButton: false,
-                                      timer: 1500
-                                    });
-                                  });
-
-                                $('.dt-button-collection').hide(); // Close the dropdown
-                                $('.dt-button-background').remove(); // Remove the backdrop
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          text: 'Open All URLs in New Tab',
-                          className: 'btn btn-primary ml-2',
-                          action: function () {
-                            const rows = table.rows().nodes();
-                            if (rows.length > 0) {
-                              Swal.fire({
-                                title: 'Please disable popup blocking!',
-                                text: 'To open all URLs in new tabs, make sure popup blocking is disabled in your browser settings.',
-                                icon: 'warning',
-                                showCancelButton: true,
-                                confirmButtonText: 'I have disabled it',
-                                cancelButtonText: 'Cancel'
-                              }).then((result) => {
-                                if (result.isConfirmed) {
-                                  $(rows).each(function () {
-                                    const url = 'http://' + $(this).find('td:eq(1)').text(); // Prepend 'http://' to the subdomain
-                                    window.open(url, '_blank'); // Open the URL in a new tab
-                                  });
-                                }
-                              });
-                            } else {
-                              Swal.fire({
-                                title: 'No URLs to open!',
-                                text: 'Please search for a domain first to generate subdomains.',
-                                icon: 'info',
-                                confirmButtonText: 'OK'
-                              });
-                            }
-                          }
-                        }
-                      ],
-                      compact: true,
-                      hover: true
-                    });
-
-                    $(".dataTables_info, .dataTables_paginate").show(); // Show pagination and info
-
-                  } else {
-                    console.error("Error fetching subdomains:", data.message);
+                      } else {
+                        Swal.fire({
+                          title: 'No URLs to open!',
+                          text: 'Please search for a domain first to generate subdomains.',
+                          icon: 'info',
+                          confirmButtonText: 'OK'
+                        });
+                      }
+                    }
                   }
-                })
-                .catch(error => {
-                  $(".input-group").removeClass("searching");
-                  $("#loading-spinner").addClass("d-none");
-                  Swal.fire({
-                    position: "center",
-                    animation: true,
-                    backdrop: true,
-                    color: "#545454",
-                    grow: false,
-                    icon: "error",
-                    title: "Error fetching subdomains!",
-                    showConfirmButton: false,
-                    timer: 1500
-                  });
-                  $("#subdomain-table_wrapper").addClass("d-none");
-                  console.error("Error fetching subdomains:", error);
-                });
-              },
+                ],
+                compact: true,
+                hover: true
+              });
+
+              $(".dataTables_info, .dataTables_paginate").show(); // Show pagination and info
+
+            } else {
+              console.error("Error fetching subdomains:", data.message);
+            }
+          })
+          .catch(error => {
+            $(".input-group").removeClass("searching");
+            $("#loading-spinner").addClass("d-none");
+            Swal.fire({
+              position: "center",
+              animation: true,
+              backdrop: true,
+              color: "#545454",
+              grow: false,
+              icon: "error",
+              title: "Error fetching subdomains!",
+              showConfirmButton: false,
+              timer: 1500
+            });
+            $("#subdomain-table_wrapper").addClass("d-none");
+            console.error("Error fetching subdomains:", error);
           });
-        });
       }
 
       function extractDomain(input) {
