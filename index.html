@@ -486,6 +486,16 @@
     $(document).ready(function () {
       let table;
 
+      const hashIndex = window.location.href.indexOf("/#/");
+
+      if (hashIndex !== -1) {
+        const domain = window.location.href.substring(hashIndex + 3);
+        if (domain) {
+          $("#search-input").val(decodeURIComponent(domain));
+          performSearch();
+        }
+      }
+
       function performSearch() {
 
         $("#faq-section").slideUp();
