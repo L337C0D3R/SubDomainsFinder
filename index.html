@@ -486,16 +486,6 @@
     $(document).ready(function () {
       let table;
 
-      const hashIndex = window.location.href.indexOf("/#/");
-
-      if (hashIndex !== -1) {
-        const domain = window.location.href.substring(hashIndex + 3);
-        if (domain) {
-          $("#search-input").val(decodeURIComponent(domain));
-          performSearch();
-        }
-      }
-
       function performSearch() {
 
         $("#faq-section").slideUp();
@@ -538,18 +528,7 @@
         var token = turnstile.getResponse();
         fetch(`https://api.subdomainfinder.in/?domain=${domain}`, { headers: { 'X-Secure-Token': token } })
           .then(response => {
-            if (response.status == 403) {
-              Swal.fire({
-                    position: "center",
-                    animation: true,
-                    backdrop: true,
-                    color: "#545454",
-                    icon: "info",
-                    title: "Please wait for a few seconds before making another request.",
-                    showConfirmButton: false,
-                    timer: 3000
-                });
-            } else if (response.status == 500){
+            if (!response.ok) {
               Swal.fire({
                 position: "center",
                 animation: true,
