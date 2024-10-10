@@ -865,7 +865,7 @@
       });
 
       $("#search-input").keypress(function (e) {
-        if (e.which == 13) {
+        if (e.which == 13 && !$("#search-button").is(":disabled")) {
           performSearch();
         }
       });
