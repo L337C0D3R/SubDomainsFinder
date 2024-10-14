@@ -310,7 +310,7 @@
         aria-label="Search" aria-describedby="search-addon" />
       <button type="button" id="search-button" class="btn btn-dark">Search</button>
     </div>
-      <!-- <div id="token" class="cf-turnstile text-center" data-sitekey="0x4AAAAAAAj7jyMV3Zv9ZMN-" data-callback="onURLChangeCallback"></div> -->
+      <div id="token" class="cf-turnstile text-center" data-sitekey="0x4AAAAAAAj7jyMV3Zv9ZMN-" data-callback="turnstileCallback"></div>
     <div id="loading-spinner" class="d-none text-center mt-2">
       <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
       <span class="sr-only">Please wait while we fetch real-time results. This may take a few moments...</span>
@@ -474,7 +474,7 @@
 
 
   <script rel="preconnect" src="/assets/js/bootstrap.bundle.min.js"></script>
-  <!-- <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script> -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
   <script src="/assets/js/sweetalert2.all.min.js" defer></script>
   <script rel="preconnect" src="/assets/js/jquery.min.js"></script>
   <script rel="preconnect" src="/assets/js/jquery.dataTables.min.js" defer></script>
@@ -485,16 +485,16 @@
   <script rel="preconnect" src="/assets/js/buttons.print.min.js" defer></script>
   <script>
 
-    // const searchButton = document.getElementById('search-button')
-    // searchButton.disabled = true;
+    const searchButton = document.getElementById('search-button')
+    searchButton.disabled = true;
     if (!sessionStorage.getItem('lastSearchedDomain')) {
         sessionStorage.setItem('lastSearchedDomain', '');
     }
 
-    window.addEventListener('hashchange', onURLChangeCallback);
+    window.addEventListener('hashchange', turnstileCallback);
 
-    function onURLChangeCallback(){
-      // searchButton.disabled = false;
+    function turnstileCallback(){
+      searchButton.disabled = false;
       const url = window.location.href;
       const regex = /https:\/\/(staging\.)?subdomainfinder\.in\/#\/([^/]+)/;
 
@@ -515,7 +515,7 @@
 
       function performSearch() {
 
-        // searchButton.disabled = true;
+        searchButton.disabled = true;
         $("#faq-section").slideUp();
         $("#updates-section").slideUp();
 
@@ -553,7 +553,7 @@
         $("#subdomain-table_wrapper").addClass("d-none");
 
         $(".dataTables_info, .dataTables_paginate").hide(); // Hide pagination and info
-        // var token = turnstile.getResponse();
+        var token = turnstile.getResponse();
         fetch(`https://api.subdomainfinder.in/?domain=${domain}`, { headers: { 'X-Secure-Token': token } })
           .then(response => {
             if (!response.ok) {
@@ -572,7 +572,7 @@
             return response.json();
           })
           .then(data => {
-            // turnstile.reset()
+            turnstile.reset()
             $(".input-group").removeClass("searching");
             $("#loading-spinner").addClass("d-none");
 
